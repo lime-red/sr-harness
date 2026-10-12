@@ -86,3 +86,10 @@ def test_bbs_cfg_either_case(tmp_path):
 
 def test_expand():
     assert expand("Bob<CR><ESC>") == "Bob\r\x1b"
+
+
+def test_packet_names():
+    from sr_harness.mail import parse
+    assert parse("900f0102.001") == ("900", "F", 1, 2, 1)
+    assert parse("555B0A01.999") == ("555", "B", 10, 1, 999)
+    assert parse("fenodes.900") is None

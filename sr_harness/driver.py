@@ -8,6 +8,11 @@ walk answers prompts lives here, because the traps are the same in both games.
 import re
 import time
 
+# A menu's title bar: "──────[Main Menu]──────", or "[International Messages]"
+# on its own. The whole line must be the header, so "[R] Reply" in a mail
+# reader and "[Hit a key]" never count.
+_HEADER = re.compile(r"^\s*[─═]*\[([A-Za-z0-9' .-]+)\][─═]*\s*$")
+
 from sr_harness.session import DosSession
 
 
@@ -20,7 +25,7 @@ class Driver:
     menu_prompt: str = "Choice>"
     # A pagination marker; while it is up, a menu key is swallowed.
     paused: str = None
-    # Lines that are always on screen and are never the prompt.
+    # Regexes for lines that are always on screen and are never the prompt.
     furniture: tuple = ()
 
     def __init__(self, session: DosSession):
@@ -45,8 +50,22 @@ class Driver:
         """
         for line in reversed(self.screen.splitlines()):
             text = line.strip()
-            if text and not any(f in text for f in self.furniture):
+            if text and not any(re.search(f, text) for f in self.furniture):
                 return text
+        return ""
+
+    @property
+    def menu(self) -> str:
+        """The title of the menu most recently drawn, or "" if none is on screen.
+
+        The prompt line alone cannot say where a walk is: "Choice>" is the
+        prompt of every menu in both games, and FE even pre-fills it with the
+        default item. The last title bar on screen can.
+        """
+        for line in reversed(self.screen.splitlines()):
+            m = _HEADER.match(line)
+            if m:
+                return m.group(1)
         return ""
 
     def at_main_menu(self) -> bool:
@@ -58,23 +77,27 @@ class Driver:
     def answer_until(self, done, prompts, timeout=300.0, label="walk"):
         """Answer the live prompt until `done(self)`, or give up.
 
-        `prompts` is a list of (regex, keys); the first whose regex matches the
-        live prompt fires, so order specific prompts before generic ones. `keys`
-        may be a callable, evaluated when it fires, so a count can live in it.
+        `prompts` is a list of (regex, keys) or (regex, keys, menu_regex); the
+        first whose regex matches the live prompt -- and, when given, whose
+        menu_regex matches `self.menu` -- fires, so order specific prompts before
+        generic ones. `keys` may be a callable, evaluated when it fires, so a
+        count can live in it.
 
         An answer re-fires only once the whole screen has changed since it last
         fired. Keying that on the prompt *line* instead stalls forever: every
         page of a game's instructions ends in the same "Continue? (Y/n)".
         """
-        compiled = [(re.compile(p, re.I), k) for p, k in prompts]
+        compiled = [(re.compile(p[0], re.I), p[1],
+                     re.compile(p[2], re.I) if len(p) > 2 else None) for p in prompts]
         fired, deadline = {}, time.time() + timeout
         while time.time() < deadline and not self.session.closed:
             self.session.pump(0.5)
             screen, prompt = self.screen, self.prompt
             if done(self):
                 return True
-            for i, (rx, keys) in enumerate(compiled):
-                if not rx.search(prompt):
+            menu = self.menu
+            for i, (rx, keys, in_menu) in enumerate(compiled):
+                if not rx.search(prompt) or (in_menu and not in_menu.search(menu)):
                     continue
                 if fired.get(i) == screen:
                     break

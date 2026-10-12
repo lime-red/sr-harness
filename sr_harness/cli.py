@@ -1,9 +1,9 @@
 """`sr-harness`: run and explore a game by hand.
 
-    sr-harness run     --install DIR --exe BRE.EXE PLANETARY /DETAILED
-    sr-harness observe --install DIR --exe FE.EXE --user ME FULL
+    sr-harness run     --install DIR --exe BRE.EXE -- PLANETARY /DETAILED
+    sr-harness observe --install DIR --exe FE.EXE --user ME -- FULL
 
-    sr-harness hold    fe --install DIR --exe FE.EXE --user ME FULL
+    sr-harness hold    fe --install DIR --exe FE.EXE --user ME -- FULL
     sr-harness keys    fe "1"            # press keys, print what came back
     sr-harness keys    fe "Bob<CR>"
     sr-harness screen  fe
@@ -14,7 +14,7 @@ how an unfamiliar game gets mapped: press a key, read the screen, decide the nex
 key -- which is exactly what a person at a terminal does, and what a scripted
 walk cannot do until somebody has done it once.
 
-Keys take `<CR>`, `<ESC>`, `<SP>`, `<TAB>`, `<LF>` tokens.
+The game's own arguments go after `--`. Keys take `<CR>`, `<ESC>`, `<SP>`, `<TAB>`, `<LF>` tokens.
 """
 import argparse
 import json
@@ -49,12 +49,10 @@ def _launch_args(ap):
     ap.add_argument("--date", help="YYYYMMDD the game should believe it is")
     ap.add_argument("--user", help="write a local DOORFILE.SR for this player")
     ap.add_argument("--transcript", help="write the raw byte stream here")
-    ap.add_argument("args", nargs=argparse.REMAINDER, help="arguments to the game")
 
 
 def _args(a) -> str:
-    rest = a.args[1:] if a.args[:1] == ["--"] else a.args
-    return " ".join(rest)
+    return " ".join(a.args)
 
 
 # ── one-shot commands ─────────────────────────────────────────────────────
@@ -95,12 +93,20 @@ def _serve(a):
     server.bind(str(path))
     os.chmod(path, 0o600)
     server.listen(4)
+    # Once the game exits, stay up a little so its last screen can still be
+    # read, then go: a server that outlives its game holds the socket name, and
+    # the next `hold` under that name refuses to start.
+    exited_at = None
     try:
         while True:
             r, _, _ = select.select([server] + ([] if session.closed else [session.master]),
                                     [], [], 1.0)
             if session.master in r:
                 session.pump(0.05)
+            if session.closed:
+                exited_at = exited_at or time.time()
+                if time.time() - exited_at > 30:
+                    break
             if server not in r:
                 continue
             conn, _ = server.accept()
@@ -225,7 +231,13 @@ def main(argv=None):
     p.add_argument("name")
     p.set_defaults(fn=cmd_release)
 
+    argv = list(sys.argv[1:] if argv is None else argv)
+    game = []
+    if "--" in argv:
+        cut = argv.index("--")
+        argv, game = argv[:cut], argv[cut + 1:]
     a = ap.parse_args(argv)
+    a.args = game
     return a.fn(a) or 0
 
 

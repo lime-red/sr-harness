@@ -43,7 +43,19 @@ p.play_turns(1)                          # every default: the do-nothing turn
 p.send_ip_message("hello from node two")
 print(p.ip_scores("players_by_score"))
 p.quit()                                 # quit properly; see below
+
+# Falcon's Eye: the same shape, different game
+from sr_harness import fe
+f = fe.Player(Install(Path.home() / ".dosemu/drive_c/bbs/doors/f900n02", "FE.EXE"),
+              county="County Two", user="TEST PILOT 02").start()
+f.status()                               # (C) Council Room, State of the County
+f.play_turns(1)                          # one month, expenses paid in full
+f.send_world_message("hello")
+f.quit()
 ```
+
+Two boards can play each other with no hub: `mail.carry({1: one, 2: two})`
+moves every outbound packet to its destination's INBOUND.
 
 ### Exploring a game by hand
 
@@ -52,7 +64,7 @@ scripted yet gets mapped: press a key, read what came back, and choose the next
 one.
 
 ```sh
-sr-harness hold fe --install ~/.dosemu/drive_c/bbs/doors/f900n02 --exe FE.EXE --user "TEST PILOT 02" FULL
+sr-harness hold fe --install ~/.dosemu/drive_c/bbs/doors/f900n02 --exe FE.EXE --user "TEST PILOT 02" -- FULL
 sr-harness keys fe "Y"
 sr-harness keys fe "2" --said     # --said: everything printed, not just the last screen
 sr-harness release fe             # kills dosemu -- quit in-game first if outbound matters
@@ -70,8 +82,19 @@ unattended command.
 | `install.py` | `Install`: batch files, `-K/-E` invocation, door file, `inuse.flg`, REDATE |
 | `driver.py` | `Driver`: the prompt-answering loop both games share |
 | `bre.py` | the BRE player: prompt table, status parser, turns, IP mail, IPScores |
+| `fe.py` | the FE player: two-level menus, joining, monthly turns, mail reader, rankings |
+| `provision.py` | a virgin game: BBS.CFG, nodes file, GAMEDATA, the RESET walk |
+| `mail.py` | packet names, and carrying packets between boards |
 | `dospath.py` | the 8.3 guard |
 | `cli.py` | `sr-harness` |
+
+## Skills
+
+`.claude/skills/` holds three write-ups: `driving-dos-doors`, `bre-harness`
+and `fe-harness`. They cover how to use this and everything learned the hard
+way about the games. Claude Code loads them when it works in this repo, and
+they read fine as plain documentation too. **Read them before porting.** A
+lot of what looks like a harness quirk is really game behaviour.
 
 ## Things that will bite you
 
@@ -103,6 +126,10 @@ they're recognisable before you hit them.
   (`Install(redate=...)`, then `run(..., date="YYYYMMDD")`).
 - **BRE's player name must be unique across the league** when duplicate checking
   is on. Otherwise the join is refused and you never reach the main menu.
+- **FE is not BRE with different words.** `Take your next turn?` defaults to
+  *No*, its mail reader wraps round forever, its rankings need `FE.EXE SCORES`,
+  and a new county's first mail can arrive `From: >>Unknown<<`. See
+  `fe-harness`.
 - **BRE interplanetary mail is only shown at the start of play**, never under (6)
   Read Messages. `Player.play_turns` keeps it in `turn_text`.
 
@@ -112,7 +139,13 @@ they're recognisable before you hit them.
 uv run pytest
 ```
 
-The unit tests need no dosemu and no game.
+The unit tests need no dosemu and no game. The live tests build scratch games
+under `~/.dosemu/drive_c/bbs/doors/srh/` from the media zips and remove them
+afterwards:
+
+```sh
+SR_HARNESS_BRE_ZIP=~/bre_sj1.zip SR_HARNESS_FE_ZIP=~/fe_sj1.zip uv run pytest
+```
 
 ## License
 

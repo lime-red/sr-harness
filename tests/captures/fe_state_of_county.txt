@@ -1,0 +1,25 @@
+LOCAL                         ──═Falcon's Eye═──                     v1.06
+Choice> State of the County
+
+State of the County of Harness County founded by Humans in month #0.
+─────═══════════════───────────────────────────────────────────────────────
+Housing Land:    100 Acres
+Total People:    100              Unemployed:    100
+Density:        1.00 people per acre
+Approval:         50%
+
+Silver:          15,000           Food:              2000
+Stone Blocks:       200           Weapon Stores:      400
+Runes:               25
+
+Military: 100 Peasants.
+Quality Rating: 50%
+Total Offense: 200 Swords       Total Defense: 200 Shields
+
+Your approval is expected to improve slightly.
+─────═══════════════───────────────────────────────────────────────────────
+The county has 20 months of protected status left.
+There are 8 months per year.
+
+─»>Paused<«─
+ TEST PILOT 01       │ A │ Harness County │
