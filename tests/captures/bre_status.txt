@@ -1,0 +1,97 @@
+Captured 2026-09-18 from the live rig (novatest-hl), league 901B node 2, by driving
+BRE.EXE FULL as a local player through nova-hub/tests/live/rig/dosdrive.py and
+selecting (2) See Status from the main menu. This file is the documented source of
+the field names in bre_agent/state.py -- do not rename a field without recapturing.
+
+The player path needs a DOORFILE.SR whose COM port is 0 (local); see
+nova-hub/docs/TEST_ENVIRONMENT_SPIKES.md "Spike 6 -- Reaching the game as a player".
+
+=== main menu (BRE v0.988) ===
+
+Current version of BRE: v0.988
+Game started on 9-16-2026
+───────────────[Barren Realms Elite]────────────────
+(1) Play Game             (8) Game Bulletins
+(2) See Status            (9) InterPlanetary Ops
+(3) See Scores            (A) Game Instructions
+(4) See Today's News      (B) Help Database
+(5) See Yesterday's News  (P) Preferences
+(6) Read Messages         (0) Quit
+(7) Send Messages
+────────────────────────────────────────────────────
+Choice>
+
+=== (2) See Status, on a freshly reset realm ===
+
+─────══════════════───────────────────────────────────────────────────
+-*Test Realm*-
+Turns: 8
+Score: 0
+Gold: 1000
+Population: 100 Million (Tax Rate: 15%)
+Popular Support: 100%
+Food: 1000
+Military: [100 Troopers]
+          [100% Morale]
+Regions:  [2 Agricultural] [5 Desert] [5 Mountains] [3 Coastal]
+You have 20 Years of Protection Left.
+─────══════════════───────────────────────────────────────────────────
+─»>Paused<«─
+
+=== the same block mid-game, after several turns ===
+
+Note the extra "Bank:" line. It is absent above because the balance is zero, so a
+parser must treat it as optional rather than as a fixed line offset.
+
+-*Test Realm*-
+Turns: 2
+Score: 1491
+Gold: 56,652
+Bank: 251,272
+Population: 106 Million (Tax Rate: 15%)
+Popular Support: 100%
+Food: 3606
+Military: [100 Troopers]
+          [100% Morale]
+Regions:  [2 Agricultural] [5 Desert] [5 Mountains] [3 Coastal]
+You have 14 Years of Protection Left.
+
+=== other screens seen on the way, for later reference ===
+
+Numbers are printed with thousands separators once they pass 9999 ("41,460"), and
+the Spending Menu is where the purchasable items and their live prices live:
+
+──────────────[Spending Menu]───────────────
+Key Item                 Price       # Owned
+(*) System Menu
+(1) Troopers              334           100
+(2) Jets                  374             0
+(3) Turrets               456             0
+(4) Bombers              2523             0
+(5) HeadQuarters         5249             0
+(6) Regions              1412            15
+(7) Covert Agents         481             0
+(8) Tanks                2238             0
+(9) Carriers             5944             0
+(S) Sell
+(V) Visit Bank
+(?) Help
+(0) Quit
+────────────────────────────────────────────
+You have 41,460 gold and 7 turns.
+Choice>
+
+───────────────────────[Team 1 Food Hall]───────────────────────
+(B) Buy Food    (S) Sell Food   (V) Visit Bank  (0) Quit
+────────────────────────────────────────────────────────────────
+You have 41,351 gold and 2693 units of food.
+Choice>
+
+Daily costs are asked as prompts, not shown as state:
+  Your Armed Forces Require 40 gold.        How much will you give? (40; 40)
+  13,695 gold is required to maintain your regions.
+  Team 1 Prince Jemima requires 2899 gold for Taxes.
+  Your People Need 154 units of food.
+
+The Bank menu itself was not captured, so loans are the one part of the schema that
+is provisional. Everything else above is verbatim from a running game.
