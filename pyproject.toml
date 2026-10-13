@@ -1,6 +1,6 @@
 [project]
 name = "sr-harness"
-version = "0.1.0"
+version = "0.2.0"
 description = "Drive Solar Realms' BBS door games (BRE, Falcon's Eye) under dosemu2"
 readme = "README.md"
 license = "MIT"

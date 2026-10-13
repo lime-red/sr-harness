@@ -78,6 +78,37 @@ def test_bre_a_played_turn_moves_the_score(bre_game):
     assert not (bre_game.path / "inuse.flg").exists()
 
 
+@needs_dosemu
+def test_bre_local_mail_between_two_realms(bre_game):
+    """Local mail: realm B writes to realm A on the same board; A reads it
+    under (6). It never becomes a packet."""
+    one = bre.Player(bre_game, realm="Realm Alpha", user="PLAYER ONE",
+                     transcript=LOGS / "srh_bre_mail1.log").start()
+    try:
+        alpha = one.letter
+    finally:
+        one.quit()
+    assert alpha == "A"
+
+    two = bre.Player(bre_game, realm="Realm Beta", user="PLAYER TWO",
+                     transcript=LOGS / "srh_bre_mail2.log").start()
+    try:
+        assert two.letter == "B"
+        two.send_message(alpha, "Greetings from Realm Beta.")
+    finally:
+        two.quit()
+
+    one = bre.Player(bre_game, realm="Realm Alpha", user="PLAYER ONE",
+                     transcript=LOGS / "srh_bre_mail3.log").start()
+    try:
+        said = one.read_messages()
+    finally:
+        one.quit()
+    assert re.search(r"Message From: Realm Beta", said)
+    assert "Greetings from Realm Beta." in said
+    assert not list((bre_game.path / "OUTBOUND").glob("*")), "local mail made a packet"
+
+
 FE_BOARDS = [(1, "Board One", "900:900/1"), (2, "Board Two", "900:900/2")]
 
 

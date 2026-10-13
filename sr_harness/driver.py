@@ -16,6 +16,32 @@ _HEADER = re.compile(r"^\s*[─═]*\[([A-Za-z0-9' .-]+)\][─═]*\s*$")
 from sr_harness.session import DosSession
 
 
+def mail_reader(screen, end: str):
+    """An answer for a game's mail reader that shows every message exactly once.
+
+    Both games' readers offer Reply, Delete, Ignore or Quit, and neither of the
+    two that leave mail alone does what it sounds like:
+      * Q is "Quit Reading": every message after this one goes unshown.
+      * I leaves the message unread and moves on -- and in FE, after the last
+        one the reader wraps round to the first again, forever.
+    So: I until a message comes round a second time, then Q. `screen` is a
+    callable returning the current screen, and `end` is the text the reader's
+    prompt starts with; the message is what lies between the last
+    "Message From" and it.
+    """
+    seen = set()
+
+    def answer():
+        text = screen()
+        start = text.rfind("Message From")
+        key = text[start:text.rfind(end)] if start >= 0 else text
+        if key in seen:
+            return "Q"
+        seen.add(key)
+        return "I"
+    return answer
+
+
 class Driver:
     # Regex that only matches when the main menu is fully drawn. Anchor on the
     # menu's own text, never on the input prompt alone: "Choice>" also appears on

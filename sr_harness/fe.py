@@ -35,7 +35,7 @@ Mapped by hand against a v1.06 install (`sr-harness hold`), 2026-10-13.
 """
 import re
 
-from sr_harness.driver import Driver
+from sr_harness.driver import Driver, mail_reader
 from sr_harness.install import Install
 
 PAUSED = r">Paused<"
@@ -67,27 +67,11 @@ READER = r"Reply, Delete, Ignore, or Quit"
 def reader(screen):
     """Answer FE's mail reader so that every message is shown exactly once.
 
-    The reader offers Reply, Delete, Ignore or Quit, and neither of the two
-    that leave mail alone does what it sounds like:
-      * Q is "Quit Reading": every message after this one goes unshown.
-      * I leaves the message unread and moves on -- and after the last one the
-        reader wraps round to the first again, forever, since all of them are
-        still unread.
-    So: I until a message comes round a second time, then Q. `screen` is a
-    callable returning the current screen. What each message said is in the
+    See `driver.mail_reader`: Q quits reading altogether, and I moves on but
+    wraps round to the first message forever. What each message said is in the
     transcript (Player.entry_text, read_messages()).
     """
-    seen = set()
-
-    def answer():
-        text = screen()
-        start = text.rfind("Message From")
-        key = text[start:text.rfind("(Reply")] if start >= 0 else text
-        if key in seen:
-            return "Q"
-        seen.add(key)
-        return "I"
-    return answer
+    return mail_reader(screen, "(Reply")
 
 
 def _then_quit(key):

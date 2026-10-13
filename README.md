@@ -26,6 +26,18 @@ pip install git+https://gitea-hl.taild204f.ts.net/lime/sr-harness.git@v0.1.0
 
 ## Use
 
+For a complete, runnable start-to-finish example, see
+[`examples/two_players.py`](examples/two_players.py). It builds a new BRE game
+from the media zip, has one player found a realm and play three turns, has a
+second player found another realm and send the first one local mail, and has
+the first player read it:
+
+```sh
+uv run python examples/two_players.py ~/bre_sj1.zip
+```
+
+The pieces, one at a time:
+
 ```python
 from pathlib import Path
 from sr_harness import Install
@@ -81,7 +93,7 @@ unattended command.
 | `run.py` | headless run to a transcript; returns dosemu's own exit code |
 | `install.py` | `Install`: batch files, `-K/-E` invocation, door file, `inuse.flg`, REDATE |
 | `driver.py` | `Driver`: the prompt-answering loop both games share |
-| `bre.py` | the BRE player: prompt table, status parser, turns, IP mail, IPScores |
+| `bre.py` | the BRE player: prompt table, status parser, turns, local and IP mail, IPScores |
 | `fe.py` | the FE player: two-level menus, joining, monthly turns, mail reader, rankings |
 | `provision.py` | a virgin game: BBS.CFG, nodes file, GAMEDATA, the RESET walk |
 | `mail.py` | packet names, and carrying packets between boards |

@@ -17,6 +17,9 @@ p = bre.Player(Install(path, "BRE.EXE"), realm="Node Two", user="TEST PILOT 02")
 p.status()                 # {'turns', 'score', 'gold', 'bank', 'food', ...}
 p.play_turns(1)            # every default: the do-nothing turn
 p.send_ip_message("hi")    # interplanetary, to all planets
+p.letter                   # "A": this realm's letter on its board
+p.send_message("B", "hi")  # local mail, to realm B on this board
+p.read_messages()          # (6): local mail, through the reader
 p.ip_scores("players_by_score")
 p.quit()                   # always: outbound runs on the way out
 ```
@@ -78,8 +81,17 @@ Food: 1000
 
 ## Mail: two kinds, shown in two places
 
-- `(7) Send Messages` is **local**, to realms on this board (`(A-Y,Z=All)
-  Send to:`). It never becomes a packet.
+- `(7) Send Messages` is **local**, to realms on this board:
+  `(A-Y,Z=All,?=List) Send to:` takes the realm's **letter and Enter** (`?`
+  lists realms with their letters; a realm's own letter is in the status bar,
+  `NAME │ A │ Realm │`). Then the line editor, `/S`, and `Do you wish to send
+  another message? (y/N)`. It never becomes a packet.
+- **Local mail is read under (6) Read Messages, in the same reader as IP mail**
+  (`[R] Reply, [D] Delete, [I] Ignore, or [Q] Quit>`). A walk that only pages
+  and answers `Choice>` hangs on it. I leaves the message for next time,
+  Q stops reading, and D deletes. `read_messages()` answers I until a message
+  repeats, then Q, the same as FE's reader (FE's I wraps round forever; with
+  one message BRE's returned to the menu, and more than one is untested).
 - **Interplanetary** mail is `(9) InterPlanetary Ops → (7) Send Message →
   (3) All Planets`, then the line editor (`1>`, `/S` saves, `/A` aborts).
 - **Incoming IP mail appears only at the start of play.** Press (1), and

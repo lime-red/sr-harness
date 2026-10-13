@@ -30,3 +30,32 @@ def test_absent_gold_is_zero_but_absent_food_is_not_invented():
     status = parse_status("-*R*-\nTurns: 1\n")
     assert status["gold"] == 0 and status["bank"] == 0
     assert "food" not in status
+
+
+class _Screen:
+    """Just enough of a session for the screen-reading properties."""
+    def __init__(self, text):
+        self.text = text
+
+    def screen_text(self):
+        return self.text
+
+
+def test_the_realm_letter_comes_from_the_status_bar():
+    from sr_harness.bre import Player
+    p = Player.__new__(Player)
+    p.session = _Screen("Choice> Play Game\n"
+                        " PLAYER TWO          │ B │ Realm Beta │ ■F2=Extra Information")
+    assert p.letter == "B"
+    # Before the realm exists the bar says UNKNOWN.
+    p.session = _Screen(" PLAYER TWO          │ UNKNOWN │ Who knows! │ ■F2=Extra Information")
+    assert p.letter == ""
+
+
+def test_the_bre_reader_shows_each_message_once_then_quits():
+    from sr_harness.driver import mail_reader
+    one = "│ Message From: Realm Beta\n│ ONE\n[R] Reply, [D] Delete, [I] Ignore, or [Q] Quit>"
+    two = "│ Message From: Realm Gamma\n│ TWO\n[R] Reply, [D] Delete, [I] Ignore, or [Q] Quit>"
+    screens = iter([one, two, one])
+    answer = mail_reader(lambda: next(screens), "[R]")
+    assert [answer(), answer(), answer()] == ["I", "I", "Q"]

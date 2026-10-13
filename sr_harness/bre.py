@@ -10,7 +10,7 @@ docs; `prompts()` below is a transcript of what the game actually asks.
 import re
 import time
 
-from sr_harness.driver import Driver
+from sr_harness.driver import Driver, mail_reader
 from sr_harness.install import Install
 
 PAUSED = r">Paused<"
@@ -52,7 +52,7 @@ def prompts(realm: str, on_continue="N"):
         # Q leaves the mail alone and closes the reader. The text has already
         # been captured by then (see play_turns), so nothing is lost by not
         # paging through the rest.
-        (r"\[R\]\s+Reply|\[Q\]\s+Quit>", "Q"),
+        (MAIL_READER,                    "Q"),
         (PAUSED,                         "\r"),
         (r"Continue\?",                  "Y"),
         (r"\[Hit a key\]|any key",       "\r"),
@@ -66,6 +66,10 @@ def prompts(realm: str, on_continue="N"):
 # Paging through a read-only screen and back out to the main menu.
 _READER = [(PAUSED, "\r"), (r"Continue\?", "Y"), (r"\[Hit a key\]|any key", "\r"),
            (r"Choice>", "0")]
+
+# The mail reader, for both local and interplanetary mail:
+#     [R] Reply, [D] Delete, [I] Ignore, or [Q] Quit>
+MAIL_READER = r"\[R\]\s+Reply|\[Q\]\s+Quit>"
 
 
 class Player(Driver):
@@ -82,6 +86,16 @@ class Player(Driver):
         super().__init__(install.session("FULL", transcript=transcript, date=date))
         self.install, self.realm, self.user = install, realm, user
         self.turn_text = ""
+
+    @property
+    def letter(self) -> str:
+        """This realm's letter on its board (A-Y), from the status bar.
+
+        It is what another realm on the same board addresses local mail to.
+        "" until the realm exists.
+        """
+        found = re.findall(r"│\s*([A-Y])\s*│", self.screen)
+        return found[-1] if found else ""
 
     def start(self, timeout=300.0):
         """Walk from launch to the main menu, creating the realm if new."""
@@ -137,8 +151,48 @@ class Player(Driver):
         return self.read_screens("9", "1", key, timeout=timeout, label="ipscores")
 
     def read_messages(self, timeout=180.0) -> str:
-        """(6) Read Messages -- local mail only; see play_turns for IP mail."""
-        return self.read_screens("6", timeout=timeout, label="messages")
+        """(6) Read Messages -- local mail only; see play_turns for IP mail.
+
+        Each message opens in the mail reader; every one is shown once and
+        left unread (see `driver.mail_reader`). Returns everything printed.
+        """
+        mark = self.session.mark()
+        self.choose("6")
+        walk = [(MAIL_READER, mail_reader(lambda: self.screen, "[R]")), *_READER]
+        self.answer_until(lambda p: p.at_main_menu(), walk, timeout, label="messages")
+        return self.session.text_since(mark)
+
+    def send_message(self, to: str, text: str, timeout=180.0):
+        """Send local mail to a realm on this board.
+
+        (7) Send Messages asks "(A-Y,Z=All,?=List) Send to:"; the answer is the
+        realm's letter (see `letter`), or Z for every realm, and it needs Enter.
+        Then the same line editor as interplanetary mail, and "Do you wish to
+        send another message? (y/N)", which the default answers. Local mail
+        never becomes a packet.
+        """
+        self.choose("7")
+        if not self.session.wait_for(r"Send to:", timeout=30):
+            raise RuntimeError(
+                f"(7) Send Messages did not ask who to; prompt was {self.prompt!r}\n"
+                f"--- screen ---\n{self.screen}"
+            )
+        self.session.send(f"{to}\r")
+        self._write(text)
+        self.back_to_menu(prompts(self.realm), timeout, label="local message")
+        self.events.append(f"sent local message to {to}: {text!r}")
+
+    def _write(self, text: str):
+        """Fill the line editor (`1>`, 68 columns) and save with /S."""
+        if not self.session.wait_for(r"(?m)^\s*1>", timeout=30):
+            raise RuntimeError(
+                f"the message editor never opened; prompt was {self.prompt!r}\n"
+                f"--- screen ---\n{self.screen}"
+            )
+        for line in text.splitlines() or [text]:
+            self.session.send(line[:68] + "\r")
+            time.sleep(0.4)
+        self.session.send("/S\r")   # /S saves, /A aborts, /C clears
 
     def play_turns(self, count: int = 1, timeout=900.0) -> int:
         """Play `count` turns, taking every default -- the do-nothing path.
@@ -189,15 +243,7 @@ class Player(Driver):
         self.choose("9")            # InterPlanetary Operations
         self.choose("7")            # Send Message
         self.choose("3")            # All Planets
-        if not self.session.wait_for(r"(?m)^\s*1>", timeout=30):
-            raise RuntimeError(
-                f"the message editor never opened; prompt was {self.prompt!r}\n"
-                f"--- screen ---\n{self.screen}"
-            )
-        for line in text.splitlines() or [text]:
-            self.session.send(line[:68] + "\r")
-            time.sleep(0.4)
-        self.session.send("/S\r")   # /S saves, /A aborts, /C clears
+        self._write(text)
         self.back_to_menu(prompts(self.realm), timeout, label="message")
         self.events.append(f"sent IP message: {text!r}")
 
@@ -255,4 +301,4 @@ def parse_status(text: str) -> dict:
     return out
 
 
-__all__ = ["Player", "parse_status", "prompts", "PAUSED"]
+__all__ = ["Player", "parse_status", "prompts", "PAUSED", "MAIL_READER"]
